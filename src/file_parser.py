@@ -32,8 +32,11 @@ def parse_csv(file_obj):
         if df[col].dtype == object:
             df[col] = df[col].astype(str).str.strip().str.strip('"\'')
             # Try numeric coercion where possible
-            coerced = pd.to_numeric(df[col], errors='ignore')
-            df[col] = coerced
+            try:
+                coerced = pd.to_numeric(df[col])
+                df[col] = coerced
+            except (ValueError, TypeError):
+                pass  # Keep as string if conversion fails
 
     return df.to_dict(orient='records')
 
@@ -46,7 +49,7 @@ def parse_pdf(file_obj):
     Reads a PDF and attempts to extract tabular data.
     Returns:
       - if tables detected: list of dict rows
-      - else: list of text paragraphs
+      - else: list of text chunks (split by paragraphs/pages)
     """
     def _extract(pdf):
         rows = []
@@ -69,21 +72,47 @@ def parse_pdf(file_obj):
                     rows.append(rec)
         if rows:
             return rows
-        # fallback: plain text paragraphs
-        texts = []
+        
+        # fallback: plain text - split into manageable chunks
+        all_text = []
         for page in pdf.pages:
-            text = page.extract_text()
-            if text:
-                texts.append(text)
-        return texts
+            try:
+                text = page.extract_text()
+                if text:
+                    all_text.append(text.strip())
+            except Exception as e:
+                print(f"[PDF] Error extracting page text: {e}")
+                continue
+        
+        # Split long text into chunks of ~1000 chars
+        chunks = []
+        for page_text in all_text:
+            # Split by paragraphs first
+            paragraphs = page_text.split('\n\n')
+            current_chunk = ""
+            for para in paragraphs:
+                if len(current_chunk) + len(para) < 1000:
+                    current_chunk += para + "\n\n"
+                else:
+                    if current_chunk.strip():
+                        chunks.append({"text": current_chunk.strip()})
+                    current_chunk = para + "\n\n"
+            if current_chunk.strip():
+                chunks.append({"text": current_chunk.strip()})
+        
+        return chunks if chunks else [{"text": "No readable content found in PDF"}]
 
-    if isinstance(file_obj, BytesIO):
-        file_obj.seek(0)
-        with pdfplumber.open(file_obj) as pdf:
-            return _extract(pdf)
-    else:
-        with pdfplumber.open(file_obj) as pdf:
-            return _extract(pdf)
+    try:
+        if isinstance(file_obj, BytesIO):
+            file_obj.seek(0)
+            with pdfplumber.open(file_obj) as pdf:
+                return _extract(pdf)
+        else:
+            with pdfplumber.open(file_obj) as pdf:
+                return _extract(pdf)
+    except Exception as e:
+        print(f"[PDF] Error parsing PDF: {e}")
+        return [{"text": f"Error parsing PDF: {str(e)}"}]
 
 
 # -----------------------------

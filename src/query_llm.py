@@ -1,16 +1,13 @@
 import os
 import json
 from dotenv import load_dotenv
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 from src.vector_manager import VectorDBManager
 from src.embeddings import get_embedding
 from src.llm import ask_llm
 
 load_dotenv()
-
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-PINECONE_INDEX = os.getenv("PINECONE_INDEX", "biz-analyst")
 
 MAX_CONTEXT_CHARS = 3000
 TOP_K = 6
@@ -74,9 +71,38 @@ Important: Do not add any extra text outside the JSON. Do not include chain-of-t
     return prompt
 
 
-def query_llm(query: str, top_k: int = TOP_K, max_context_chars: int = MAX_CONTEXT_CHARS, namespace: str = None) -> Dict[str, Any]:
-    db = VectorDBManager(api_key=PINECONE_API_KEY, index_name=PINECONE_INDEX)
-    query_vector = get_embedding(query, is_query=True)
+def query_llm(query: str, top_k: int = TOP_K, max_context_chars: int = MAX_CONTEXT_CHARS, namespace: str = None, user_id: str = None, model: str = "auto") -> Dict[str, Any]:
+    """
+    Query the RAG system with optional user_id for using user's own API keys.
+    Uses user's model preference if set, or the provided model parameter.
+    """
+    # Use provided model, or get user's preference
+    model_to_use = model
+    if model == "auto" and user_id:
+        try:
+            from src.user_keys import get_user_preference
+            saved_model = get_user_preference(user_id, "model", "auto")
+            if saved_model and saved_model != "llama-3.1-70b-versatile":  # Skip deprecated
+                model_to_use = saved_model
+        except:
+            pass
+    
+    # Get Pinecone config (uses user keys if available)
+    pinecone_api_key, pinecone_index = None, None
+    if user_id:
+        try:
+            from src.user_keys import get_effective_key
+            pinecone_api_key = get_effective_key(user_id, "pinecone_api_key")
+            pinecone_index = get_effective_key(user_id, "pinecone_index")
+        except:
+            pass
+    
+    # Fall back to env vars
+    pinecone_api_key = pinecone_api_key or os.getenv("PINECONE_API_KEY")
+    pinecone_index = pinecone_index or os.getenv("PINECONE_INDEX", "biz-analyst")
+    
+    db = VectorDBManager(api_key=pinecone_api_key, index_name=pinecone_index)
+    query_vector = get_embedding(query, is_query=True, user_id=user_id)
 
     if namespace:
         result = db.query(vector=query_vector, top_k=top_k, namespace=namespace)
@@ -94,16 +120,18 @@ def query_llm(query: str, top_k: int = TOP_K, max_context_chars: int = MAX_CONTE
         }
 
     prompt = _build_prompt(query, context_text)
-    llm_response = ask_llm(prompt)
+    llm_response = ask_llm(prompt, model=model_to_use, user_id=user_id)
 
     try:
         parsed = json.loads(llm_response.strip())
         parsed["resolved_sources"] = sources
+        parsed["model_used"] = model_to_use
         return parsed
     except Exception:
         return {
             "answer": llm_response.strip(),
             "sources": sources,
+            "model_used": model_to_use,
             "warning": "LLM response was not valid JSON."
         }
 
