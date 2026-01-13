@@ -74,6 +74,7 @@ def get_auth_url(state: str = None) -> str:
 def exchange_code_for_tokens(code: str) -> Optional[Dict]:
     """Exchange authorization code for tokens"""
     if not is_configured():
+        print("[Gmail] ERROR: Gmail not configured")
         return None
     
     try:
@@ -81,6 +82,7 @@ def exchange_code_for_tokens(code: str) -> Optional[Dict]:
         flow.fetch_token(code=code)
         credentials = flow.credentials
         
+        print(f"[Gmail] ✅ Token exchange successful")
         return {
             "token": credentials.token,
             "refresh_token": credentials.refresh_token,
@@ -90,7 +92,9 @@ def exchange_code_for_tokens(code: str) -> Optional[Dict]:
             "scopes": list(credentials.scopes)
         }
     except Exception as e:
-        print(f"Token exchange error: {e}")
+        print(f"[Gmail] ❌ Token exchange error: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 def store_user_tokens(user_id: str, tokens: Dict):
