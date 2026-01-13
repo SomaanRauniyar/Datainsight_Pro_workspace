@@ -6,26 +6,6 @@
 
 ---
 
-## ⚡ What's New in v2.0
-
-### 🏗️ **Modular Architecture**
-- **Before**: Single 1,534-line file ❌
-- **After**: Clean, organized modules ✅
-- **Benefit**: Recruiter-friendly, maintainable codebase
-
-### 🚀 **Speed Optimizations**
-- **Quick Upload**: 2-5 seconds (vs 15-30 seconds)
-- **Background Processing**: Non-blocking user experience
-- **Streaming Support**: Real-time progress updates
-- **Smart Chunking**: 40% faster embedding generation
-
-### 📊 **Performance Improvements**
-| File Type | Before | After | Improvement |
-|-----------|--------|-------|-------------|
-| Small CSV (1MB) | 15-30s | 3-5s | **5-6x faster** |
-| Large CSV (10MB) | 60-120s | 10-15s | **6-8x faster** |
-| PDF Document | 45-90s | 8-12s | **5-7x faster** |
-
 ---
 
 ## 🚀 Features
@@ -100,7 +80,7 @@ DataInsight Pro/
 ### System Architecture
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    STREAMLIT FRONTEND                       │
+│                    React FRONTEND                       │
 │  (Tabs: Analysis, Collaboration, Briefings, Settings)       │
 └────────────────────┬────────────────────────────────────────┘
                      │ HTTP + Auth Token
