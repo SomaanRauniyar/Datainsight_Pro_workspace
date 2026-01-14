@@ -1,10 +1,14 @@
 # DataInsight Pro
 
 > **🚀 AI-Powered Business Analytics Platform with Team Collaboration**
-> 
-> **NEW: Modular Architecture + 5-6x Faster Response Times!**
+
+A full-stack application featuring RAG-powered data analysis, natural language visualizations, real-time team chat with Gmail integration, AI-detected smart calendar events, executive briefings & meeting prep generation, intelligent auto-model switching for optimal performance, and BYOK (Bring Your Own Keys) for unlimited free usage.
 
 ---
+
+## 🏗️ System Architecture
+
+![Architecture Diagram](image/architecture-diagram.png)
 
 ---
 
