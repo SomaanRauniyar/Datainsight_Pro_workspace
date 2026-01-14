@@ -59,10 +59,15 @@ app.state.upload_jobs = {}  # Background job tracking
 
 # ============== Middleware Configuration ==============
 
-# CORS middleware
+# CORS configuration - supports both local and production
+CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000").split(",")
+# Add wildcard for development if not in production
+if os.getenv("RAILWAY_ENVIRONMENT") is None:
+    CORS_ORIGINS.append("*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure for production
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
