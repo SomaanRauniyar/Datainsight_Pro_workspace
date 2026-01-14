@@ -244,12 +244,12 @@ def validate_file_extension(filename: str, allowed: list[str]) -> bool:
 
 SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
-    "X-Frame-Options": "DENY",
+    "X-Frame-Options": "SAMEORIGIN",
     "X-XSS-Protection": "1; mode=block",
-    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-    "Content-Security-Policy": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';",
     "Referrer-Policy": "strict-origin-when-cross-origin",
 }
+# Note: CSP removed to allow Swagger UI to work properly
+# In production, you may want to add a more permissive CSP
 
 
 def get_security_headers() -> dict:
