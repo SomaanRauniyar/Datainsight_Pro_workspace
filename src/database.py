@@ -72,23 +72,35 @@ def store_clerk_session(token: str, user_id: str, email: str, name: str = None):
 def validate_session(token: str) -> Optional[Dict]:
     if not token:
         return None
+    
+    print(f"[DEBUG] Validating token: {token[:20]}...")
+    
     if SUPABASE_AVAILABLE:
         try:
             result = supabase.table("user_sessions").select("*").eq("token", token).execute()
             if result.data:
                 s = result.data[0]
+                print(f"[DEBUG] Supabase validation successful for user: {s.get('email')}")
                 return {"user_id": s["user_id"], "email": s["email"], 
                         "name": s.get("name"), "is_admin": s.get("is_admin", False)}
         except Exception as e:
-            print(f"Supabase validate error: {e}")
+            print(f"[ERROR] Supabase validate error: {e}")
+    
+    # Check Clerk sessions
     if token in _memory_store.get("clerk_sessions", {}):
         s = _memory_store["clerk_sessions"][token]
+        print(f"[DEBUG] Clerk session validation successful for user: {s.get('email')}")
         return {"user_id": s["user_id"], "email": s["email"],
                 "name": s.get("name"), "is_admin": s.get("is_admin", False)}
+    
+    # Check local users
     for user in _memory_store["users"].values():
         if user.get("token") == token:
+            print(f"[DEBUG] Local user validation successful for user: {user.get('email')}")
             return {"user_id": user["id"], "email": user["email"],
                     "name": user.get("name"), "is_admin": user.get("is_admin", False)}
+    
+    print(f"[ERROR] Token validation failed - no matching session found")
     return None
 
 def delete_session(token: str):
