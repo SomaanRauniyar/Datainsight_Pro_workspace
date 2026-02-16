@@ -111,17 +111,16 @@ def health():
     health_status = {"status": "healthy", "version": "2.0.0"}
     
     # Check Supabase connection
-    if SUPABASE_AVAILABLE:
-        try:
-            from src.database import supabase
-            # Simple query to test connection
-            result = supabase.table("user_sessions").select("count").limit(1).execute()
-            health_status["supabase"] = "✅ Connected"
-        except Exception as e:
-            health_status["supabase"] = f"❌ Error: {str(e)}"
-            health_status["status"] = "degraded"
-    else:
+    try:
+        from src.database import supabase
+        # Simple query to test connection
+        result = supabase.table("user_sessions").select("count").limit(1).execute()
+        health_status["supabase"] = "✅ Connected"
+    except ImportError:
         health_status["supabase"] = "⚠️ Not configured"
+    except Exception as e:
+        health_status["supabase"] = f"❌ Error: {str(e)}"
+        health_status["status"] = "degraded"
     
     # Check Pinecone
     try:
