@@ -75,8 +75,13 @@ def delete_calendar_event(event_id: int, user: dict = Depends(require_auth)):
 @router.get("/suggestions")
 def get_event_suggestions(user: dict = Depends(require_auth)):
     """Get pending event suggestions"""
-    suggestions = CalendarService.get_pending_suggestions(user["user_id"])
-    return {"suggestions": suggestions}
+    try:
+        suggestions = CalendarService.get_pending_suggestions(user["user_id"])
+        return {"suggestions": suggestions or []}
+    except Exception as e:
+        # Return empty array instead of crashing
+        print(f"[WARNING] Calendar suggestions error: {e}")
+        return {"suggestions": []}
 
 @router.post("/suggestions/{suggestion_id}/accept")
 def accept_event_suggestion(

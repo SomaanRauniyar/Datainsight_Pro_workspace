@@ -3,6 +3,7 @@ Database module for DataInsight Pro
 Uses Supabase for persistent storage, falls back to in-memory
 """
 import os
+import time
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 from pathlib import Path
@@ -42,6 +43,21 @@ _memory_store = {
     "files": [], "briefings": [], "email_threads": {}, "email_messages": {},
     "clerk_sessions": {}
 }
+
+def retry_supabase_query(func, max_retries=3, delay=0.5):
+    """Retry Supabase queries on temporary connection failures"""
+    for attempt in range(max_retries):
+        try:
+            return func()
+        except Exception as e:
+            error_msg = str(e).lower()
+            # Retry on connection issues
+            if "resource temporarily unavailable" in error_msg or "connection" in error_msg:
+                if attempt < max_retries - 1:
+                    time.sleep(delay * (attempt + 1))  # Exponential backoff
+                    continue
+            raise  # Re-raise if not a connection issue or max retries reached
+    return None
 
 def init_db():
     if CLERK_AVAILABLE:
@@ -88,8 +104,11 @@ def validate_session(token: str) -> Optional[Dict]:
     
     if SUPABASE_AVAILABLE:
         try:
-            result = supabase.table("user_sessions").select("*").eq("token", token).execute()
-            if result.data:
+            def query():
+                return supabase.table("user_sessions").select("*").eq("token", token).execute()
+            
+            result = retry_supabase_query(query)
+            if result and result.data:
                 s = result.data[0]
                 print(f"[DEBUG] ✅ Supabase validation successful for user: {s.get('email')}")
                 return {"user_id": s["user_id"], "email": s["email"], 
