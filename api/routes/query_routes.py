@@ -28,11 +28,32 @@ def query_text(
         
         # Log token usage
         if user:
-            log_token_usage(user["user_id"], 500, "query")  # Estimate
+            try:
+                log_token_usage(user["user_id"], 500, "query")  # Estimate
+            except:
+                pass  # Don't fail if logging fails
         
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"[ERROR] Query failed: {str(e)}")
+        print(f"[ERROR] Traceback: {error_details}")
+        
+        # Return user-friendly error
+        error_msg = str(e)
+        if "namespace" in error_msg.lower() or "no matches" in error_msg.lower():
+            raise HTTPException(
+                status_code=400, 
+                detail="No data found for this file. Please make sure the file was uploaded successfully and processing completed."
+            )
+        elif "pinecone" in error_msg.lower():
+            raise HTTPException(
+                status_code=500,
+                detail="Vector database connection error. Please try again in a moment."
+            )
+        else:
+            raise HTTPException(status_code=500, detail=f"Query failed: {str(e)}")
 
 @router.get("/schema")
 def get_schema(
