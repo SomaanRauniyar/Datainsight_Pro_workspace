@@ -107,8 +107,31 @@ def root():
 
 @app.get("/health")
 def health():
-    """Health check endpoint"""
-    return {"status": "healthy", "version": "2.0.0"}
+    """Health check endpoint with database status"""
+    health_status = {"status": "healthy", "version": "2.0.0"}
+    
+    # Check Supabase connection
+    if SUPABASE_AVAILABLE:
+        try:
+            from src.database import supabase
+            # Simple query to test connection
+            result = supabase.table("user_sessions").select("count").limit(1).execute()
+            health_status["supabase"] = "✅ Connected"
+        except Exception as e:
+            health_status["supabase"] = f"❌ Error: {str(e)}"
+            health_status["status"] = "degraded"
+    else:
+        health_status["supabase"] = "⚠️ Not configured"
+    
+    # Check Pinecone
+    try:
+        vector_db = app.state.vector_db
+        health_status["pinecone"] = "✅ Connected"
+    except Exception as e:
+        health_status["pinecone"] = f"❌ Error: {str(e)}"
+        health_status["status"] = "degraded"
+    
+    return health_status
 
 # Register all route modules
 app.include_router(auth_routes.router, prefix="/auth", tags=["Authentication"])
