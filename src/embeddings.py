@@ -8,7 +8,7 @@ load_dotenv()
 
 # Voyage AI configuration (primary)
 VOYAGE_API_KEY = os.getenv("VOYAGE_API_KEY")
-VOYAGE_MODEL = os.getenv("VOYAGE_MODEL", "voyage-3")
+VOYAGE_MODEL = os.getenv("VOYAGE_MODEL", "voyage-large-2-instruct")  # Updated to correct model
 VOYAGE_API_URL = "https://api.voyageai.com/v1/embeddings"
 
 # Cohere configuration (fallback)
@@ -44,6 +44,7 @@ def get_client_for_user(user_id: str = None):
 def get_voyage_embedding(text: str, is_query: bool = False):
     """Get embedding from Voyage AI"""
     if not VOYAGE_API_KEY:
+        print(f"[Embeddings] No Voyage API key found")
         return None
     
     try:
@@ -58,12 +59,22 @@ def get_voyage_embedding(text: str, is_query: bool = False):
             "input_type": input_type
         }
         
+        print(f"[Embeddings] Calling Voyage AI with model={VOYAGE_MODEL}, input_type={input_type}")
         response = requests.post(VOYAGE_API_URL, headers=headers, json=data, timeout=30)
+        
+        if response.status_code != 200:
+            print(f"[Embeddings] Voyage AI HTTP {response.status_code}: {response.text}")
+            return None
+            
         response.raise_for_status()
         result = response.json()
+        print(f"[Embeddings] ✅ Voyage AI success! Got embedding of length {len(result['data'][0]['embedding'])}")
         return result["data"][0]["embedding"]
+    except requests.exceptions.Timeout:
+        print(f"[Embeddings] Voyage AI timeout after 30s")
+        return None
     except Exception as e:
-        print(f"[Embeddings] Voyage AI error: {e}")
+        print(f"[Embeddings] Voyage AI error: {type(e).__name__}: {e}")
         return None
 
 
